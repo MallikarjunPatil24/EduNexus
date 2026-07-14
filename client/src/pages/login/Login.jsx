@@ -80,7 +80,13 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-navy text-cream flex items-center justify-center p-4 relative overflow-hidden">
+    <div 
+      className="min-h-screen text-cream flex items-center justify-center p-4 relative overflow-hidden bg-cover bg-center"
+      style={{ backgroundImage: "url('/edunex.jpg')" }}
+    >
+      {/* Dark overlay to make the login card stand out and text readable */}
+      <div className="absolute inset-0 bg-navy-dark/75 backdrop-blur-[3px] pointer-events-none" />
+
       {/* Decorative background shapes */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gold/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-navy-light/40 blur-[120px] pointer-events-none" />
