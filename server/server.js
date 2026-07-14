@@ -22,7 +22,7 @@ initSocket(server);
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Allow explicit frontend origin for credentialed requests
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Allow explicit frontend origin for credentialed requests
   credentials: true
 }));
 app.use(express.json());
