@@ -73,7 +73,8 @@ const Login = () => {
         navigate(`/${data.role}`);
       }, 1500);
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || 'Registration failed.');
+      const backendMessage = err.response?.data?.message || err.message;
+      setErrorMessage(backendMessage || 'Registration failed. Please check your details.');
     } finally {
       setSubmitting(false);
     }

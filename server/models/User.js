@@ -10,9 +10,9 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
     lowercase: true,
+    index: true
   },
   password: {
     type: String,
@@ -21,7 +21,8 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['admin', 'teacher', 'parent', 'student'],
+    enum: ['admin', 'school', 'teacher', 'parent', 'student'],
+    index: true
   },
   phone: {
     type: String,
@@ -41,7 +42,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
@@ -50,7 +51,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Compare password method
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

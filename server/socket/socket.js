@@ -3,44 +3,71 @@ import { Server } from 'socket.io';
 let io;
 
 export const initSocket = (server) => {
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    process.env.CLIENT_URL,
+    process.env.FRONTEND_URL
+  ].filter(Boolean);
+
   io = new Server(server, {
     cors: {
-      origin: '*', // Allow all origins for local development
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (
+          allowedOrigins.includes(origin) ||
+          origin.startsWith('http://localhost:') ||
+          origin.startsWith('http://127.0.0.1:') ||
+          origin.endsWith('.onrender.com') ||
+          origin.endsWith('.cloudfront.net')
+        ) {
+          return callback(null, true);
+        }
+        return callback(new Error('Socket.IO CORS blocked origin'), false);
+      },
       methods: ['GET', 'POST'],
+      credentials: true
     },
   });
 
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[SOCKET] Client connected: ${socket.id}`);
+    }
 
     // Join general user room
     socket.on('join_user', (userId) => {
-      socket.join(userId);
-      console.log(`User ${userId} joined room`);
+      if (userId) {
+        socket.join(userId);
+      }
     });
 
-    // Join role-based room (e.g. 'teacher', 'student', 'parent', 'admin')
+    // Join role-based room (e.g. 'teacher', 'student', 'parent', 'admin', 'school')
     socket.on('join_role', (role) => {
-      socket.join(role);
-      console.log(`User joined role room: ${role}`);
+      if (role) {
+        socket.join(role);
+      }
     });
 
-    // Handle messages
+    // Handle messages with room targeting
     socket.on('send_message', (data) => {
-      // data: { sender, receiver, content, timestamp }
       const { receiver } = data;
-      socket.to(receiver).emit('receive_message', data);
-      console.log(`Message routed from ${data.sender} to ${receiver}`);
+      if (receiver) {
+        socket.to(receiver).emit('receive_message', data);
+      }
     });
 
     // Handle typing indicator
     socket.on('typing', (data) => {
-      // data: { sender, receiver, isTyping }
-      socket.to(data.receiver).emit('typing', data);
+      if (data?.receiver) {
+        socket.to(data.receiver).emit('typing', data);
+      }
     });
 
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${socket.id}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[SOCKET] Client disconnected: ${socket.id}`);
+      }
     });
   });
 
@@ -56,14 +83,14 @@ export const getIO = () => {
 
 // Send real-time notification to a specific user
 export const sendNotificationToUser = (userId, notification) => {
-  if (io) {
+  if (io && userId) {
     io.to(userId).emit('notification', notification);
   }
 };
 
 // Send real-time notification to a specific role group
 export const sendNotificationToRole = (role, notification) => {
-  if (io) {
+  if (io && role) {
     io.to(role).emit('notification', notification);
   }
 };

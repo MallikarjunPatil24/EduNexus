@@ -2,21 +2,20 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Ensure uploads directory exists
-const uploadDir = './uploads';
+// Cross-platform uploads directory resolution
+const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, uploadDir);
   },
   filename(req, file, cb) {
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
+    const sanitizedExt = path.extname(file.originalname).toLowerCase();
+    const uniqueName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}${sanitizedExt}`;
+    cb(null, uniqueName);
   },
 });
 
@@ -28,12 +27,15 @@ function checkFileType(file, cb) {
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb(new Error('Images and document files only!'));
+    cb(new Error('Only valid images and document files are permitted!'));
   }
 }
 
 const upload = multer({
   storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
   fileFilter(req, file, cb) {
     checkFileType(file, cb);
   },

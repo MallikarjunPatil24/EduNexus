@@ -8,13 +8,17 @@ client/dist/
 dist/
 build/
 
+# Uploads & temporary runtime storage
+uploads/
+server/uploads/
+
 # Environment configurations and secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 server/.env
+server/.env.*
+!server/.env.example
 
 # Editor configs and system files
 .vscode/

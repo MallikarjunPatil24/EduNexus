@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import http from 'http';
-import connectDB from './config/db.js';
+import connectDB, { getDbStatus } from './config/db.js';
 import router from './routes/route.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 import { initSocket } from './socket/socket.js';
@@ -20,19 +20,25 @@ const server = http.createServer(app);
 // Initialize Socket.io
 initSocket(server);
 
-// Middleware
+// CORS configuration
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.CLIENT_URL,
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, postman)
     if (!origin) return callback(null, true);
     
-    // Check if the origin matches local, FRONTEND_URL, or is a Render domain
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:') ||
+      origin.endsWith('.onrender.com') ||
+      origin.endsWith('.cloudfront.net')
+    ) {
       return callback(null, true);
     }
     
@@ -40,17 +46,31 @@ app.use(cors({
   },
   credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve Static Uploads
-const __dirname = path.resolve();
-app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
+// Serve Static Uploads with cross-platform directory resolution
+const uploadsPath = path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`[REQUEST] ${req.method} ${req.url}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[REQUEST] ${req.method} ${req.url}`);
+  }
   next();
+});
+
+// Health check endpoint (Req #20)
+app.get('/api/health', (req, res) => {
+  const dbStatus = getDbStatus();
+  res.status(dbStatus === 'connected' ? 200 : 503).json({
+    success: dbStatus === 'connected',
+    status: dbStatus === 'connected' ? 'healthy' : 'unhealthy',
+    database: dbStatus,
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Mount API routes

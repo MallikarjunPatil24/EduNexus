@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
-// Helper to ensure dummy pdf storage folder exists
+// Helper to ensure PDF storage folder exists cross-platform
 const ensurePdfDir = () => {
-  const dir = './uploads/documents';
+  const dir = path.join(process.cwd(), 'uploads', 'documents');
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -12,7 +12,7 @@ const ensurePdfDir = () => {
 
 export const generateReceiptPDF = (feeRecord, student, classObj) => {
   const dir = ensurePdfDir();
-  const filename = `receipt-${feeRecord._id || Date.now()}.txt`; // Using txt for light simulated storage
+  const filename = `receipt-${feeRecord._id || Date.now()}.txt`; // Simulated receipt file
   const filePath = path.join(dir, filename);
   
   const content = `

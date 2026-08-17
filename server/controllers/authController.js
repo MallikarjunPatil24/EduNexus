@@ -4,6 +4,7 @@ import Student from '../models/Student.js';
 import Teacher from '../models/Teacher.js';
 import Parent from '../models/Parent.js';
 import Class from '../models/Class.js';
+import mongoose from 'mongoose';
 
 // Generate Token
 const generateToken = (res, id) => {
@@ -34,12 +35,28 @@ export const loginUser = async (req, res, next) => {
       return next(new Error('Please provide an email and password'));
     }
 
-    const user = await User.findOne({ email });
+    const { role } = req.body;
+    let user;
+
+    if (role) {
+      user = await User.findOne({ email, role });
+    }
+
+    if (!user) {
+      const users = await User.find({ email });
+      for (const u of users) {
+        if (await u.matchPassword(password)) {
+          user = u;
+          break;
+        }
+      }
+    }
 
     if (user && (await user.matchPassword(password))) {
       const token = generateToken(res, user._id);
       
       res.json({
+        success: true,
         _id: user._id,
         name: user.name,
         email: user.email,
@@ -92,7 +109,6 @@ export const getUserProfile = async (req, res, next) => {
           }
         });
       
-      // Let's populate the student profiles also
       const childrenProfiles = [];
       if (parentProfile && parentProfile.children) {
         for (const childUser of parentProfile.children) {
@@ -111,6 +127,7 @@ export const getUserProfile = async (req, res, next) => {
     }
 
     res.json({
+      success: true,
       user,
       profileDetails
     });
@@ -126,13 +143,19 @@ export const registerPublicUser = async (req, res, next) => {
   const { name, email, password, role = 'admin', phone = '', rollNum = '', className = '', section = '' } = req.body;
 
   try {
-    const userExists = await User.findOne({ email });
-    if (userExists) {
+    // Allow up to 3 accounts per email (and max 1 account per role for the same email)
+    const existingRoleAccount = await User.findOne({ email, role });
+    if (existingRoleAccount) {
       res.status(400);
-      return next(new Error('User already exists with this email'));
+      return next(new Error(`An account for ${email} with role '${role}' already exists.`));
     }
 
-    // Create Base User
+    const existingCount = await User.countDocuments({ email });
+    if (existingCount >= 3) {
+      res.status(400);
+      return next(new Error('Maximum limit of 3 accounts per email address reached.'));
+    }
+
     const user = await User.create({
       name,
       email,
@@ -141,7 +164,6 @@ export const registerPublicUser = async (req, res, next) => {
       phone
     });
 
-    // Auto-create profile mappings based on role
     if (role === 'teacher') {
       await Teacher.create({
         user: user._id,
@@ -156,10 +178,9 @@ export const registerPublicUser = async (req, res, next) => {
       });
     } 
     else if (role === 'student') {
-      // Find a class or assign a fallback
       let classObj = await Class.findOne({ className, section });
       if (!classObj) {
-        classObj = await Class.findOne({}); // Fallback to any class
+        classObj = await Class.findOne({});
       }
 
       await Student.create({
@@ -172,6 +193,7 @@ export const registerPublicUser = async (req, res, next) => {
     const token = generateToken(res, user._id);
 
     res.status(201).json({
+      success: true,
       _id: user._id,
       name: user.name,
       email: user.email,
@@ -184,6 +206,27 @@ export const registerPublicUser = async (req, res, next) => {
   }
 };
 
+// Explicit Role Registration Handlers (Req #5)
+export const registerSchoolUser = (req, res, next) => {
+  req.body.role = 'admin';
+  return registerPublicUser(req, res, next);
+};
+
+export const registerTeacherUser = (req, res, next) => {
+  req.body.role = 'teacher';
+  return registerPublicUser(req, res, next);
+};
+
+export const registerParentUser = (req, res, next) => {
+  req.body.role = 'parent';
+  return registerPublicUser(req, res, next);
+};
+
+export const registerStudentUser = (req, res, next) => {
+  req.body.role = 'student';
+  return registerPublicUser(req, res, next);
+};
+
 // @desc    Logout user & clear cookie
 // @route   POST /api/auth/logout
 // @access  Private
@@ -192,5 +235,5 @@ export const logoutUser = (req, res) => {
     httpOnly: true,
     expires: new Date(0),
   });
-  res.status(200).json({ message: 'Logged out successfully' });
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
 };

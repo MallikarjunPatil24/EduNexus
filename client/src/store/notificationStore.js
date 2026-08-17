@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import io from 'socket.io-client';
+import { SERVER_BASE_URL } from '../api/client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const getSocketURL = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  return import.meta.env.DEV ? 'http://localhost:5000' : window.location.origin;
+};
+
+const SOCKET_URL = getSocketURL();
 
 export const useNotificationStore = create((set, get) => ({
   socket: null,
@@ -11,14 +19,20 @@ export const useNotificationStore = create((set, get) => ({
   initSocket: (user) => {
     if (get().socket) return; // Socket already active
 
-    const socketConn = io(SOCKET_URL);
+    const socketConn = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ['websocket', 'polling']
+    });
 
     socketConn.on('connect', () => {
-      console.log('Socket connected to server');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Socket connected to server');
+      }
       
-      // Join user specific and role specific rooms
-      socketConn.emit('join_user', user._id);
-      socketConn.emit('join_role', user.role);
+      if (user) {
+        socketConn.emit('join_user', user._id);
+        socketConn.emit('join_role', user.role);
+      }
     });
 
     // Listen for real-time notifications

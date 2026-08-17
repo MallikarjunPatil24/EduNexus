@@ -1,18 +1,16 @@
 import mongoose from 'mongoose';
+import { CLASSES, SECTIONS } from '../utils/constants.js';
 
 const classSchema = new mongoose.Schema({
   className: {
     type: String,
     required: true,
-    enum: [
-      '1st Standard', '2nd Standard', '3rd Standard', '4th Standard', '5th Standard',
-      '6th Standard', '7th Standard', '8th Standard', '9th Standard', '10th Standard'
-    ]
+    enum: CLASSES,
   },
   section: {
     type: String,
     required: true,
-    enum: ['A', 'B'],
+    enum: SECTIONS,
     default: 'A'
   },
   sclassName: {
@@ -21,7 +19,8 @@ const classSchema = new mongoose.Schema({
   },
   classTeacher: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    index: true
   },
   maxStudents: {
     type: Number,
@@ -35,6 +34,8 @@ const classSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+classSchema.index({ className: 1, section: 1 }, { unique: true });
 
 // Auto-generate unified class section name
 classSchema.pre('save', function(next) {

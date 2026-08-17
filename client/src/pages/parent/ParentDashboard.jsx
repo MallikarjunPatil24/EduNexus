@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import client from '../../api/client';
+import client, { SERVER_BASE_URL } from '../../api/client';
 import DashboardLayout from '../../components/DashboardLayout';
 import StatCard from '../../components/ui/StatCard';
 import DataTable from '../../components/ui/DataTable';
@@ -77,7 +77,7 @@ const ParentDashboard = () => {
       const res = await client.post(`/parent/pay-fee/${billId}`, { paymentMethod });
       alert('Payment processed successfully! Simulated invoice receipt has been compiled.');
       if (res.data.receiptUrl) {
-        window.open(`http://localhost:5000${res.data.receiptUrl}`);
+        window.open(`${SERVER_BASE_URL}${res.data.receiptUrl}`);
       }
       await fetchChildAcademicReport();
       await fetchParentData();
@@ -310,7 +310,7 @@ const ParentDashboard = () => {
                     <div>
                       {fee.status === 'Paid' ? (
                         <a
-                          href={`http://localhost:5000${fee.receiptUrl}`}
+                          href={`${SERVER_BASE_URL}${fee.receiptUrl}`}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center space-x-2 px-4 py-2 bg-navy hover:bg-navy-light text-cream font-bold rounded-lg text-xs transition shadow-sm"
